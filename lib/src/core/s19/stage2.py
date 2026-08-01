@@ -58,51 +58,15 @@ def zones_on_tf(dt, o, h, l, c) -> list[dict]:
       * LINE (BSL/SSL) — liquidity swept_at (first wick through the level).
       * EQ (EQL/EQH) — the same strict wick-pierce, computed here.
     'Held after touch' is a LABEL question and plays no part here.
+
+    The lifecycle scans that used to run per zone over the rest of the tape are
+    heaps in streams/zones.py now — each zone is entered once and popped at most
+    once. Same list, same order, element for element (walled against _legacy).
     """
-    n = len(c)
-    ix = pd.DatetimeIndex(dt)
-    bar = {t: i for i, t in enumerate(ix)}
-    cc = np.asarray(c, float)
-    out: list[dict] = []
-
-    for kind, boxes in (("FVG", fvg.compute(dt, o, h, l, c)["boxes"]),
-                        ("OB", ob.compute(dt, o, h, l, c)["boxes"])):
-        for b in boxes:
-            up = b["side"] == "bull"
-            far = b["lo"] if up else b["hi"]
-            s = bar[b["confirm_at"]]
-            seg = cc[s + 1:]                            # first CLOSE beyond far edge
-            hit = (seg < far) if up else (seg > far)
-            w = int(np.argmax(hit)) if hit.size else 0
-            ve = (s + 1 + w) if (hit.size and hit[w]) else n
-            out.append({"kind": kind, "up": up, "lo": b["lo"], "hi": b["hi"],
-                        "touch": b["hi"] if up else b["lo"],       # near edge
-                        "far": far, "width": b["hi"] - b["lo"],
-                        "gap": float(b.get("gap", 0.0)), "start": s, "virgin_end": ve})
-
-    for q in liquidity.compute(dt, o, h, l, c)["lines"]:
-        up = q["side"] == "BSL"                       # BSL below (green), SSL above
-        out.append({"kind": "BSL" if up else "SSL", "up": up,
-                    "lo": q["level"], "hi": q["level"], "touch": q["level"],
-                    "far": q["level"], "width": 0.0, "gap": 0.0,
-                    "start": bar[q["confirm_at"]],
-                    "virgin_end": bar[q["swept_at"]] if q["swept_at"] is not None else n})
-
-    for e in eqhl.compute(dt, o, h, l, c)["events"]:
-        is_low = e["kind"] == "EQL"
-        lvl = eq_level(e["p1"], e["p2"], is_low)
-        s = bar[e["confirm_at"]]
-        ve = n
-        for j in range(s + 1, n):                     # first strict pierce (as liquidity)
-            if (l[j] < lvl) if is_low else (h[j] > lvl):
-                ve = j
-                break
-        out.append({"kind": "EQL" if is_low else "EQH", "up": is_low,
-                    "lo": lvl, "hi": lvl, "touch": lvl, "far": lvl,
-                    "width": 0.0, "gap": 0.0, "start": s, "virgin_end": ve})
-
-    out.sort(key=lambda z: z["start"])
-    return out
+    from .store import FeatureStore
+    st = FeatureStore("15m", {"zones"})          # tf only labels tokens; unused here
+    st.extend(dt, o, h, l, c)
+    return st.zones()
 
 
 # ── reclaim primitive — proven == frozen sweep.py at RECLAIM_BARS=3 ──────────

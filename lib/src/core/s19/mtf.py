@@ -38,49 +38,17 @@ def closed_index(bar_dt: pd.DatetimeIndex, tf_minutes: float,
 
 
 def tf_state(dt, o, h, l, c, tf: str) -> dict:
-    """Per-bar running state of one timeframe, from the frozen features only."""
-    brk = [(m["confirm"], "U" if m["side"] == "high" else "D", float(m["price"]))
-           for m in erl_events(h, l, c) if m["role"] == "ERL"]
-    stream = edge_stream(h, l, c)
-    n = len(c)
-    last_dir = np.zeros(n, np.int8)
-    since = np.full(n, -1.0)
-    n_recent = np.zeros(n, np.float32)
-    hi = np.full(n, np.nan)
-    lo = np.full(n, np.nan)
-    hi_pro = np.zeros(n, np.float32)
-    lo_pro = np.zeros(n, np.float32)
-    bi = 0
-    si = 0
-    cur_dir, cur_bar = 0, -1
-    cur_hi = cur_lo = np.nan
-    cur_hip = cur_lop = 0.0
-    stamps: list[int] = []
-    for k in range(n):
-        while bi < len(brk) and brk[bi][0] <= k:
-            cur_dir = 1 if brk[bi][1] == "U" else -1
-            cur_bar = brk[bi][0]
-            stamps.append(cur_bar)
-            bi += 1
-        while si < len(stream) and stream[si][0] <= k:
-            _, side, price, _, kind = stream[si]
-            if side == "high":
-                cur_hi, cur_hip = price, 1.0 if kind == "promote" else 0.0
-            else:
-                cur_lo, cur_lop = price, 1.0 if kind == "promote" else 0.0
-            si += 1
-        last_dir[k] = cur_dir
-        since[k] = (k - cur_bar) if cur_bar >= 0 else -1.0
-        while stamps and stamps[0] < k - 200:
-            stamps.pop(0)
-        n_recent[k] = len(stamps)
-        hi[k], lo[k], hi_pro[k], lo_pro[k] = cur_hi, cur_lo, cur_hip, cur_lop
-    zs, zn = zone_state(dt, o, h, l, c)          # PREREG 4B.2 — zones on EVERY tf
-    fs, fn = fib_state(dt, o, h, l, c)
-    return {"last_dir": last_dir, "since": since, "n_recent": n_recent,
-            "hi": hi, "lo": lo, "hi_pro": hi_pro, "lo_pro": lo_pro,
-            "zone": zs, "zone_names": zn, "fib": fs, "fib_names": fn,
-            "close": np.asarray(c, float), "dt": pd.DatetimeIndex(dt), "tf": tf}
+    """Per-bar running state of one timeframe, from the frozen features only.
+
+    The break/edge cursors, the zone picture (PREREG 4B.2 — zones on EVERY tf)
+    and the fib context are all carried forward bar by bar in FeatureStore now,
+    instead of each being rebuilt from the whole tape. Same answer, element for
+    element — walled in tests/test_s19_store.py against _legacy.
+    """
+    from .store import FeatureStore
+    st = FeatureStore(tf, {"tf_state", "zone_ctx", "fib_ctx"})
+    st.extend(dt, o, h, l, c)
+    return st.tf_state()
 
 
 def block(state: dict, idx: np.ndarray, ref_price: np.ndarray) -> np.ndarray:

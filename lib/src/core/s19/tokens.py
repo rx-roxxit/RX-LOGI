@@ -77,28 +77,16 @@ def _rows(dt, o, h, l, c) -> list[tuple]:
 
 
 def tf_tokens(dt, o, h, l, c, tf: str, tf_slot: int) -> dict:
-    """Static token matrix for one timeframe, sorted by knowability."""
-    rows = _rows(dt, o, h, l, c)
-    if not rows:
-        return {"known": np.array([], "datetime64[ns]"), "level": np.zeros(0),
-                "static": np.zeros((0, N_STATIC), np.float32)}
-    rows.sort(key=lambda r: r[0])
-    at = np.array([r[0] for r in rows], "datetime64[ns]")
-    tid = np.array([r[1] for r in rows], np.int64)
-    level = np.array([r[2] for r in rows], float)
-    size = np.array([r[3] for r in rows], float)
-    known = at + np.timedelta64(int(TF_MIN[tf]), "m")     # the bar must close first
-    static = np.zeros((len(rows), N_STATIC), np.float32)
-    static[np.arange(len(rows)), tid] = 1.0
-    static[:, len(TYPES) + tf_slot] = 1.0
-    # PREREG 4C.2 — size must be UNITLESS or it acts as an asset label under AIO
-    # (raw medians span four orders of magnitude across the five instruments).
-    rel = size / np.maximum(np.abs(level), 1e-9)
-    static[:, len(TYPES) + 3] = np.log1p(rel * 1000.0)
-    clock, _ = clock_features(pd.DatetimeIndex(at), TF_MIN[tf])
-    static[:, len(TYPES) + 4:] = clock
-    return {"known": known, "level": level, "static": static,
-            "tf_min": float(TF_MIN[tf])}
+    """Static token matrix for one timeframe, sorted by knowability.
+
+    The nine features are polled per bar in streams/tokens.py rather than each
+    being run over the whole tape; the tie-break order inside a bar is the same
+    _rows order, so the array is identical (walled against _legacy).
+    """
+    from .store import FeatureStore
+    st = FeatureStore(tf, {"tokens"})
+    st.extend(dt, o, h, l, c)
+    return st.tokens(tf_slot)
 
 
 def merged_stream(cell_tfs: tuple[str, str, str], tapes: dict) -> dict:

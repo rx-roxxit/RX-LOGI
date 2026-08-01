@@ -49,78 +49,26 @@ def _events(dt, o, h, l, c):
 
 
 def zone_state(dt, o, h, l, c) -> tuple[np.ndarray, list[str]]:
-    """(n_bars, 14) running zone picture — only objects alive at that bar."""
-    n = len(c)
-    ev = _events(dt, o, h, l, c)
-    born: dict[int, list] = {}
-    gone: dict[int, list] = {}
-    for kind, b, g, lvl in ev:
-        born.setdefault(b, []).append((kind, lvl, b))
-        if g is not None:
-            gone.setdefault(g, []).append((kind, lvl, b))
-    live: list[tuple] = []
-    out = np.zeros((n, len(ZONE_FEATS)), np.float32)
-    price = np.asarray(c, float)
-    for k in range(n):
-        for x in born.get(k, ()):
-            live.append(x)
-        for x in gone.get(k, ()):
-            if x in live:
-                live.remove(x)
-        p = price[k]
-        scale = max(p, 1e-9)
-        above = [(lvl, kind, b) for kind, lvl, b in live if lvl > p]
-        below = [(lvl, kind, b) for kind, lvl, b in live if lvl <= p]
-        poi_a = [x for x in above if x[1] == "poi"]
-        poi_b = [x for x in below if x[1] == "poi"]
-        pool_a = [x for x in above if x[1] == "pool"]
-        pool_b = [x for x in below if x[1] == "pool"]
-        eqh = [x for x in above if x[1] == "eqh"] + [x for x in below if x[1] == "eqh"]
-        eql = [x for x in above if x[1] == "eql"] + [x for x in below if x[1] == "eql"]
-        near = lambda xs, up: (min(x[0] for x in xs) - p) / scale if (xs and up) else \
-                              ((p - max(x[0] for x in xs)) / scale if xs else 0.0)
-        age = lambda xs: (k - max(x[2] for x in xs)) / 100.0 if xs else 0.0
-        out[k] = [len(poi_a) / 10.0, len(poi_b) / 10.0, near(poi_a, True), near(poi_b, False),
-                  len(pool_a) / 10.0, len(pool_b) / 10.0, near(pool_a, True), near(pool_b, False),
-                  1.0 if eqh else 0.0, 1.0 if eql else 0.0,
-                  near(eqh, True) if eqh else 0.0, near(eql, False) if eql else 0.0,
-                  age(poi_a), age(poi_b)]
-    return out, ZONE_FEATS
+    """(n_bars, 14) running zone picture — only objects alive at that bar.
+
+    The per-bar loop this used to run now lives in streams/zone_ctx.py, where the
+    live set is kept level-sorted instead of rebuilt; the answer is unchanged
+    element for element (walled in tests/test_s19_store.py against _legacy).
+    """
+    from .store import FeatureStore
+    st = FeatureStore("15m", {"zone_ctx"})       # tf only labels tokens; unused here
+    st.extend(dt, o, h, l, c)
+    return st.zone_ctx()
 
 
 def fib_state(dt, o, h, l, c) -> tuple[np.ndarray, list[str]]:
     """(n_bars, 6) — where price sits on the live leg, plus how deep the previous
-    three legs actually retraced (the context the USER asked for explicitly)."""
-    n = len(c)
-    ix = _idx(dt)
-    legs = fib.compute(dt, o, h, l, c)["fibs"]
-    born: dict[int, list] = {}
-    for f in legs:
-        born.setdefault(ix[np.datetime64(f["confirm_at"], "ns")], []).append(f)
-    out = np.zeros((n, len(FIB_FEATS)), np.float32)
-    price = np.asarray(c, float)
-    cur = None
-    cur_from = 0
-    depths: list[float] = []           # realized retracement of each finished leg
-    lo_run = hi_run = None
-    for k in range(n):
-        if k in born:
-            if cur is not None:        # close the previous leg: how deep did it pull back?
-                span = cur["start_price"] - cur["end_price"]
-                if abs(span) > 1e-12:
-                    ext = (hi_run - cur["end_price"]) / span if cur["dir"] == "down" \
-                        else (cur["end_price"] - lo_run) / -span if span < 0 else 0.0
-                    depths.append(float(np.clip(ext, -1.0, 3.0)))
-            cur = born[k][-1]
-            cur_from = k
-            lo_run = hi_run = price[k]
-        if cur is not None:
-            lo_run = min(lo_run, float(l[k]))
-            hi_run = max(hi_run, float(h[k]))
-            span = cur["start_price"] - cur["end_price"]
-            pos = (price[k] - cur["end_price"]) / span if abs(span) > 1e-12 else 0.0
-            prev = (depths[-3:] + [0.0, 0.0, 0.0])[:3][::-1]
-            out[k] = [float(np.clip(pos, -1.0, 3.0)),
-                      1.0 if cur["dir"] == "up" else 0.0,
-                      min((k - cur_from) / 100.0, 3.0), *prev]
-    return out, FIB_FEATS
+    three legs actually retraced (the context the USER asked for explicitly).
+
+    The running leg and its extremes now live in streams/fib_ctx.py; the answer
+    is unchanged element for element (walled against _legacy).
+    """
+    from .store import FeatureStore
+    st = FeatureStore("15m", {"fib_ctx"})        # tf only labels tokens; unused here
+    st.extend(dt, o, h, l, c)
+    return st.fib_ctx()

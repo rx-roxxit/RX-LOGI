@@ -1,9 +1,9 @@
 {
- "product": "RX Logi V2.0",
- "version": "2.0.0",
+ "product": "RX Logi V2.0.1",
+ "version": "2.0.1",
  "kind": "trade PLANNER (structure read + launch zones). NOT auto-trade, NOT an entry signal \u2014 the human confirms and decides.",
- "git": "9d5ecd8fd8ab5d2f63b09fb8198c04fa0fd34265",
- "built_utc": "2026-07-21T20:29:23.375156+00:00",
+ "git": "d17f4bcad757ca3bb425763abc17d851de3343fc",
+ "built_utc": "2026-08-01T09:09:26.126894+00:00",
  "cells": [
   "1H",
   "30m",
@@ -86,11 +86,12 @@
  },
  "weights_sha256": "f82a4daff7cb90f8b17a329fa885f93b27116d59080d3ddd6cf123f975b882e1",
  "verify_gates": {
-  "hash_match": "pass",
-  "isolation": "pass",
-  "parity": "pass",
-  "sample_io": "pass",
-  "causality": "pass"
+  "isolation": "pass (proved by vendor_lib.py at vendor time; this build confirms all 57 vendored files are present, unmodified, match their repo sources, and are the complete set today's closure needs)",
+  "hash_match": "pass (every entry in lib/VENDOR_HASHES.json verified against lib/ and the repo, this build)",
+  "causality": "pass (_build/test_p4_causality.py, this build)",
+  "sample_io": "pass (verify.py, this build)",
+  "livebook": "pass (verify.py, this build)",
+  "parity": "pass (verify.py, this build)"
  },
  "performance": "blind-2025 end-to-end (real direction gates zones); see performance/PERFORMANCE.md. NOT P&L; a planner, human confirms.",
  "input_contract": {
@@ -133,7 +134,14 @@
   "ordering": "ascending by time, contiguous, no gaps/duplicates per timeframe.",
   "min_lookback": ">= 12 months of continuous history per timeframe so the structure state (ERL/swings/zones) is warm; more history is fine and preferred."
  },
+ "serving": {
+  "entry_points": {
+   "LiveBook": "stateful; feed CLOSED bars GROUPED BY CLOSE INSTANT via on_closed_bars(items). Feeding one bar at a time returns wrong plans without raising.",
+   "plan": "stateless; recomputes from the start of the tape on every call. For a one-off answer or as a reference."
+  },
+  "read_first": "SERVING.md"
+ },
  "runtime": "Python only (see requirements.txt). The feature/structure pipeline is vendored byte-identical under lib/ and MUST run natively \u2014 never re-implement it in another language (that is where model quality dies).",
  "lib_provenance": "byte-identical vendor of the training pipeline; see lib/VENDOR_HASHES.json",
- "n_files": 96
+ "n_payload_files": 119
 }

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""RX Logi V2.0 — the planner. ONE entry point: plan(bars_by_tf, cell).
+"""RX Logi V2.0 - the planner. ONE entry point: plan(bars_by_tf, cell).
 
 This is a trade PLANNER, not an auto-trader and not an entry signal: on every
 confirmed ERL break it reads whether structure will CONTINUE or REVERSE (stage-1)
@@ -180,3 +180,148 @@ def plan(bars_by_tf: dict, cell: str, require_fresh: bool = True) -> dict | None
                 "has_line": int(cl["has_line"]),
             })
     return out
+
+
+class LiveBook:
+    """Every cell of one symbol, sharing one set of stores and fed once.
+
+    plan() is a pure function of the whole tape and recomputes the market from
+    2015 on every call. This holds that computation as state and appends one
+    group to it, so a plan costs the bar rather than the decade.
+
+    Feed CLOSED bars of EVERY timeframe the cells use, GROUPED BY CLOSE INSTANT:
+    gather everything that closed at time T, hand it over as one group, then
+    read the answer (src/core/s19/replay.py::replay_feed does this for a replay;
+    a live feed must do the same).
+
+    One book per symbol. Stores are per (symbol, timeframe), so there is nothing
+    to share across symbols.
+    """
+
+    def __init__(self, cells=CELLS_ALL, retain: str = "live") -> None:
+        from src.core.s19.book import StoreBook
+        from src.core.s19.cell import CellEngine
+        cells = tuple(cells)
+        seen_cells = []
+        for c in cells:
+            if c not in CELLS_ALL:
+                raise ValueError(f"cell must be one of {CELLS_ALL}, got {c!r}")
+            if c not in seen_cells:
+                seen_cells.append(c)
+        self.cells = tuple(seen_cells)
+        self.book = StoreBook(self.cells, retain=retain)
+        self.engines = {c: CellEngine(c, self.book) for c in self.cells}
+
+    def warm(self, bars_by_tf: dict) -> None:
+        """Walk history once. Retention is whatever the book was built with, so
+        live mode ends warm start already inside its memory budget.
+
+        No model runs here - warming is ingest only.
+        """
+        from src.core.s19.replay import replay_feed
+        need = set(self.book.stores)
+        missing = need - set(bars_by_tf)
+        if missing:
+            raise ValueError(
+                f"cells {self.cells} need timeframes {sorted(need)}; "
+                f"missing {sorted(missing)}")
+        tapes = {}
+        for tf in need:
+            b = bars_by_tf[tf]
+            tapes[tf] = _to_tape(b) if hasattr(b, "columns") else b
+        for group in replay_feed(tapes):
+            self.book.extend_group(group)
+
+    def on_closed_bars(self, items) -> dict:
+        """Take EVERY bar that closed on one instant, then return the plans that
+        instant makes, keyed by cell. Nothing happened -> {}, which is ~99% of
+        calls.
+
+        items = [(tf, (timestamp, open, high, low, close)), ...]
+        """
+        fed = self.book.extend_group(items)
+        out = {}
+        for cell, eng in self.engines.items():
+            eng.observe(fed)
+            if not eng.gate():
+                continue
+            p = self._plan(cell, eng)
+            if p is not None:
+                out[cell] = p
+        return out
+
+    def _plan(self, cell: str, eng) -> dict | None:
+        p = eng.latest_plan()
+        if p is None:
+            return None
+        path = CELLS[cell][2]
+        st = eng.stores[path]
+        ref = float(st.c[p["known_bar"]])
+        width = p["erl_hi"] - p["erl_lo"]
+        ctx = eng.ctx_row(p, ref)
+        seq, lens = eng.seq_tail(p, ref, width)
+        p_cont = _stage1_pcont(cell, seq, lens, ctx)
+        up = p["state"] == "HH"
+
+        out = {
+            "instant": pd.Timestamp(p["known_at"]).isoformat(),
+            "cell": cell,
+            "direction": "up" if up else "down",
+            "state": p["state"],
+            "continue": bool(p_cont > 0.5),
+            "dir_confidence": round(p_cont, 4),
+            "erl_target": p["erl_hi"] if up else p["erl_lo"],
+            "invalidation": p["erl_lo"] if up else p["erl_hi"],
+            "zones": [],
+        }
+
+        cands = eng.candidates(p, ref)
+        for z in cands:
+            z["tf_depth"] = LADDER[cell].index(z["tf"])
+            z["ok"] = 0
+        blo, bhi, _ = plan_band(p, ref)
+        clusters = cluster_candidates(cands, blo, bhi, ref, up)
+        if clusters:
+            nc = len(clusters)
+            X = np.array([[cl[f] for f in CLUSTER_FEATS] + [nc] for cl in clusters], float)
+            sc = _stage2_scores(cell, X)
+            for rank, idx in enumerate(np.argsort(-sc)[:3]):
+                cl = clusters[int(idx)]
+                out["zones"].append({
+                    "rank": rank + 1,
+                    "lo": round(float(cl["lo"]), 5), "hi": round(float(cl["hi"]), 5),
+                    "touch": round(float(cl["touch"]), 5),
+                    "confidence": round(float(sc[int(idx)]), 4),
+                    "n_zones": int(cl["n_zones"]), "n_tf": int(cl["n_tf"]),
+                    "has_ob": int(cl["has_ob"]), "has_fvg": int(cl["has_fvg"]),
+                    "has_line": int(cl["has_line"]),
+                })
+        return out
+
+
+class LivePlanner:
+    """One cell, kept warm across calls.
+
+    This is a LiveBook with a single cell - the same code path, not a parallel
+    copy - so every wall written against it covers the book too. Serving more
+    than one cell of a symbol should use LiveBook: it holds 7 stores instead of
+    15 and feeds each bar once instead of three times.
+    """
+
+    def __init__(self, cell: str, retain: str = "live") -> None:
+        if cell not in CELLS_ALL:
+            raise ValueError(f"cell must be one of {CELLS_ALL}")
+        self.cell = cell
+        self.path = CELLS[cell][2]
+        self._lb = LiveBook((cell,), retain=retain)
+        self.eng = self._lb.engines[cell]
+
+    def warm(self, bars_by_tf: dict) -> None:
+        self._lb.warm(bars_by_tf)
+
+    def on_closed_bars(self, items) -> dict | None:
+        """Take EVERY bar that closed on one instant, then return the plan that
+        instant makes - or None. There is deliberately no single-bar entry
+        point, because any per-bar ordering hides something that should be
+        visible (see src/core/s19/replay.py)."""
+        return self._lb.on_closed_bars(items).get(self.cell)
