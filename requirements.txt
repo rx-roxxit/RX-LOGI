@@ -1,0 +1,10 @@
+# RX Logi V2.0 — pinned to the versions this package was built and verified on.
+# Python 3.11. Inference is CPU-only (weights load with map_location="cpu"); a CUDA
+# build is optional. scikit-learn is pinned EXACTLY — the stage-2 .joblib models are
+# version-sensitive and may fail/warn if unpickled under a different minor.
+torch==2.12.1            # tested build: 2.12.1+cu126 (CPU wheel is sufficient for serving)
+scikit-learn==1.9.0      # must match — stage-2 GBM joblib pickles
+joblib==1.5.3
+numpy==2.4.6
+pandas==3.0.3
+pyarrow==24.0.0          # reading the sample_io parquet + any parquet bar feed

@@ -1,0 +1,79 @@
+{
+ "cell": "15m",
+ "call": "plan(bars_by_tf, cell) with the bars_*.parquet in this folder",
+ "input_summary": {
+  "15m": {
+   "n_bars": 35392,
+   "first": "2023-12-11 11:15:00",
+   "last": "2025-06-11 11:15:00"
+  },
+  "1H": {
+   "n_bars": 8854,
+   "first": "2023-12-11 12:00:00",
+   "last": "2025-06-11 11:00:00"
+  },
+  "30m": {
+   "n_bars": 17698,
+   "first": "2023-12-11 11:30:00",
+   "last": "2025-06-11 11:30:00"
+  },
+  "3m": {
+   "n_bars": 176941,
+   "first": "2023-12-11 11:15:00",
+   "last": "2025-06-11 11:30:00"
+  },
+  "5m": {
+   "n_bars": 106168,
+   "first": "2023-12-11 11:15:00",
+   "last": "2025-06-11 11:30:00"
+  }
+ },
+ "expected": {
+  "instant": "2025-06-11T11:15:00",
+  "cell": "15m",
+  "direction": "down",
+  "state": "LL",
+  "continue": true,
+  "dir_confidence": 0.6844,
+  "erl_target": 3325.755,
+  "invalidation": 3348.405,
+  "zones": [
+   {
+    "rank": 1,
+    "lo": 3333.145,
+    "hi": 3334.145,
+    "touch": 3333.145,
+    "confidence": 0.263,
+    "n_zones": 3,
+    "n_tf": 2,
+    "has_ob": 0,
+    "has_fvg": 1,
+    "has_line": 1
+   },
+   {
+    "rank": 2,
+    "lo": 3336.595,
+    "hi": 3336.595,
+    "touch": 3336.595,
+    "confidence": 0.1439,
+    "n_zones": 3,
+    "n_tf": 2,
+    "has_ob": 0,
+    "has_fvg": 0,
+    "has_line": 1
+   },
+   {
+    "rank": 3,
+    "lo": 3341.055,
+    "hi": 3344.205,
+    "touch": 3341.055,
+    "confidence": 0.1354,
+    "n_zones": 5,
+    "n_tf": 3,
+    "has_ob": 0,
+    "has_fvg": 1,
+    "has_line": 1
+   }
+  ]
+ }
+}

@@ -1,0 +1,139 @@
+{
+ "product": "RX Logi V2.0",
+ "version": "2.0.0",
+ "kind": "trade PLANNER (structure read + launch zones). NOT auto-trade, NOT an entry signal \u2014 the human confirms and decides.",
+ "git": "9d5ecd8fd8ab5d2f63b09fb8198c04fa0fd34265",
+ "built_utc": "2026-07-21T20:29:23.375156+00:00",
+ "cells": [
+  "1H",
+  "30m",
+  "15m"
+ ],
+ "chain": "stage-1 (continue/reverse) gates stage-2 (launch-zone ranking); run in sequence",
+ "stages": {
+  "stage1": {
+   "role": "direction read",
+   "model": "Transformer encoder over a 96-event multi-timeframe stream + MLP over a 117-dim context, 2-class head",
+   "arch_per_cell": {
+    "15m": {
+     "d_model": 64,
+     "layers": 3,
+     "heads": 4
+    },
+    "30m": {
+     "d_model": 64,
+     "layers": 2,
+     "heads": 4
+    },
+    "1H": {
+     "d_model": 32,
+     "layers": 2,
+     "heads": 2
+    }
+   },
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "weights": [
+    "weights/stage1/15m/prod_seed0.pt",
+    "weights/stage1/15m/prod_seed1.pt",
+    "weights/stage1/15m/prod_seed2.pt",
+    "weights/stage1/1H/prod_seed0.pt",
+    "weights/stage1/1H/prod_seed1.pt",
+    "weights/stage1/1H/prod_seed2.pt",
+    "weights/stage1/30m/prod_seed0.pt",
+    "weights/stage1/30m/prod_seed1.pt",
+    "weights/stage1/30m/prod_seed2.pt"
+   ],
+   "note": "prod_* is retrained including 2025 and is NOT separately validated \u2014 2026 is fenced; use the exam figures as its estimate"
+  },
+  "stage2": {
+   "role": "zone selection",
+   "model": "HistGradientBoostingClassifier (per-POI-cluster P(launch)), 3-seed mean",
+   "features": [
+    "dist_rel",
+    "pos_band",
+    "width_rel",
+    "n_zones",
+    "n_tf",
+    "has_path",
+    "has_ob",
+    "has_fvg",
+    "has_line",
+    "finest_depth",
+    "n_clusters"
+   ],
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "weights": [
+    "weights/stage2/15m/prod_seed0.joblib",
+    "weights/stage2/15m/prod_seed1.joblib",
+    "weights/stage2/15m/prod_seed2.joblib",
+    "weights/stage2/1H/prod_seed0.joblib",
+    "weights/stage2/1H/prod_seed1.joblib",
+    "weights/stage2/1H/prod_seed2.joblib",
+    "weights/stage2/30m/prod_seed0.joblib",
+    "weights/stage2/30m/prod_seed1.joblib",
+    "weights/stage2/30m/prod_seed2.joblib"
+   ],
+   "note": "prod_*.joblib retrains including 2025 and is NOT separately validated (2026 fenced); use the exam figures as its estimate."
+  }
+ },
+ "weights_sha256": "f82a4daff7cb90f8b17a329fa885f93b27116d59080d3ddd6cf123f975b882e1",
+ "verify_gates": {
+  "hash_match": "pass",
+  "isolation": "pass",
+  "parity": "pass",
+  "sample_io": "pass",
+  "causality": "pass"
+ },
+ "performance": "blind-2025 end-to-end (real direction gates zones); see performance/PERFORMANCE.md. NOT P&L; a planner, human confirms.",
+ "input_contract": {
+  "bars_by_tf": "dict {timeframe: pandas DataFrame with columns open,high,low,close}",
+  "required_timeframes_per_cell": {
+   "1H": [
+    "15m",
+    "30m",
+    "1H",
+    "4H",
+    "D"
+   ],
+   "30m": [
+    "5m",
+    "15m",
+    "30m",
+    "1H",
+    "4H"
+   ],
+   "15m": [
+    "3m",
+    "5m",
+    "15m",
+    "30m",
+    "1H"
+   ]
+  },
+  "all_timeframes_union": [
+   "3m",
+   "5m",
+   "15m",
+   "30m",
+   "1H",
+   "4H",
+   "D"
+  ],
+  "index": "each bar indexed by its OPEN timestamp",
+  "timezone": "UTC. Pass tz-naive UTC or tz-aware UTC; the model converts to America/New_York INTERNALLY for killzone features \u2014 do not pre-shift.",
+  "bar_convention": "a bar is usable only once CLOSED (open + timeframe_duration <= now); pass only closed bars.",
+  "ordering": "ascending by time, contiguous, no gaps/duplicates per timeframe.",
+  "min_lookback": ">= 12 months of continuous history per timeframe so the structure state (ERL/swings/zones) is warm; more history is fine and preferred."
+ },
+ "runtime": "Python only (see requirements.txt). The feature/structure pipeline is vendored byte-identical under lib/ and MUST run natively \u2014 never re-implement it in another language (that is where model quality dies).",
+ "lib_provenance": "byte-identical vendor of the training pipeline; see lib/VENDOR_HASHES.json",
+ "n_files": 96
+}

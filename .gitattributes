@@ -1,0 +1,11 @@
+# Keep the vendored package byte-stable across clones (raw sha256 in VENDOR_HASHES
+# must stay valid; frozen.py's freeze-wall is \r-insensitive regardless).
+*.py    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.txt   text eol=lf
+*.sha256 text eol=lf
+# model weights are binary — never touch them
+*.pt     binary
+*.joblib binary
+*.onnx   binary

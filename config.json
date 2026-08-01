@@ -1,0 +1,114 @@
+{
+ "product": "RX Logi V2.0",
+ "kind": "trade PLANNER (structure read + launch zones). NOT auto-trade, NOT an entry signal \u2014 the human confirms and decides.",
+ "cells": [
+  "1H",
+  "30m",
+  "15m"
+ ],
+ "cell_meaning": {
+  "1H": "1D>4H>1H",
+  "30m": "4H>1H>30M",
+  "15m": "1H>30M>15M"
+ },
+ "entry_point": "inference.plan(bars_by_tf, cell) -> None | {direction, continue, dir_confidence, erl_target, invalidation, zones[<=3]}",
+ "trigger": "call plan() after every CLOSED path-TF bar; it returns a result only on the bar that confirms a new ERL break (else None).",
+ "input_contract": {
+  "bars_by_tf": "dict {timeframe: pandas DataFrame with columns open,high,low,close}",
+  "required_timeframes_per_cell": {
+   "1H": [
+    "15m",
+    "30m",
+    "1H",
+    "4H",
+    "D"
+   ],
+   "30m": [
+    "5m",
+    "15m",
+    "30m",
+    "1H",
+    "4H"
+   ],
+   "15m": [
+    "3m",
+    "5m",
+    "15m",
+    "30m",
+    "1H"
+   ]
+  },
+  "all_timeframes_union": [
+   "3m",
+   "5m",
+   "15m",
+   "30m",
+   "1H",
+   "4H",
+   "D"
+  ],
+  "index": "each bar indexed by its OPEN timestamp",
+  "timezone": "UTC. Pass tz-naive UTC or tz-aware UTC; the model converts to America/New_York INTERNALLY for killzone features \u2014 do not pre-shift.",
+  "bar_convention": "a bar is usable only once CLOSED (open + timeframe_duration <= now); pass only closed bars.",
+  "ordering": "ascending by time, contiguous, no gaps/duplicates per timeframe.",
+  "min_lookback": ">= 12 months of continuous history per timeframe so the structure state (ERL/swings/zones) is warm; more history is fine and preferred."
+ },
+ "stage1": {
+  "model": "Transformer (ChainNet): 96-event multi-TF stream + 117-dim context, 2-class head",
+  "arch_per_cell": {
+   "1H": {
+    "d_model": 32,
+    "layers": 2,
+    "heads": 2,
+    "n_ctx": 117
+   },
+   "30m": {
+    "d_model": 64,
+    "layers": 2,
+    "heads": 4,
+    "n_ctx": 117
+   },
+   "15m": {
+    "d_model": 64,
+    "layers": 3,
+    "heads": 4,
+    "n_ctx": 117
+   }
+  },
+  "seq_cap": 96,
+  "n_token": 44,
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "ensemble": "mean of the 3 seeds' softmax",
+  "output": "P(continue) vs P(reverse); dir_confidence = P(continue)",
+  "scaler": "ctx_mu/ctx_sd embedded in each .pt (apply (ctx-mu)/sd; never refit)"
+ },
+ "stage2": {
+  "model": "GBM (HistGradientBoostingClassifier), per-POI-cluster P(launch)",
+  "features": [
+   "dist_rel",
+   "pos_band",
+   "width_rel",
+   "n_zones",
+   "n_tf",
+   "has_path",
+   "has_ob",
+   "has_fvg",
+   "has_line",
+   "finest_depth",
+   "n_clusters"
+  ],
+  "n_features": 11,
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "ensemble": "mean of the 3 seeds' P(launch)",
+  "scaler": "NONE \u2014 trees; do not scale the features"
+ },
+ "runtime": "Python only (see requirements.txt). The feature/structure pipeline is vendored byte-identical under lib/ and MUST run natively \u2014 never re-implement it in another language (that is where model quality dies)."
+}

@@ -1,0 +1,15 @@
+{
+ "features": [
+  "dist_rel",
+  "pos_band",
+  "width_rel",
+  "n_zones",
+  "n_tf",
+  "has_path",
+  "has_ob",
+  "has_fvg",
+  "has_line",
+  "finest_depth",
+  "n_clusters"
+ ]
+}

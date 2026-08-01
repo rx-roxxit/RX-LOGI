@@ -1,0 +1,4 @@
+# Build artefacts only. The weights and sample bars ARE the product here and
+# must stay tracked - do not add them.
+__pycache__/
+*.pyc
