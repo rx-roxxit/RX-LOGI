@@ -1,5 +1,5 @@
 {
- "vendored_from_git": "d17f4bcad757ca3bb425763abc17d851de3343fc",
+ "vendored_from_git": "83203935eaa633148c16fd41bde0f69f61c51c40",
  "note": "byte-identical copy of the runtime import-closure; layout preserves src/core/s19 + FEATURES_VERIFIED + platform app/features so frozen.py's freeze-wall resolves and passes unmodified. No logic or import edits.",
  "sha256": {
   "src/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -48,16 +48,16 @@
   "FEATURES_VERIFIED/trend.py": "d1f0c86854126ac04843514d08b633b27301a58e03b1762faa22dd76ea030608",
   "FEATURES_VERIFIED/MANIFEST.sha256": "2284a4e1b166255214530818381d5db1850e23bbeafc2ede103fe6cab431a077",
   "FEATURES_VERIFIED/README.md": "f4752d9bf612d89803ba98859898c8deb02c72eea7e7faf81bfe266fc38a7624",
-  "release\\TheRXDesk\\platform\\backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "release\\TheRXDesk\\platform\\backend/app/features/__init__.py": "16be5ac1825fae025032911454537855cd74df7b19465ffec19cff6b0cf0e3c4",
-  "release\\TheRXDesk\\platform\\backend/app/features/eqhl.py": "b2e2efaa3edbeca9e295a68c6e68a90ee91e3cd1eba2c9a81e94d17881870312",
-  "release\\TheRXDesk\\platform\\backend/app/features/erl_irl.py": "c1e9233f043db00275e40d1c134a37621a9d1fc5b0e30cea64038b772f8a3f31",
-  "release\\TheRXDesk\\platform\\backend/app/features/fib.py": "303d42bc3a2e26772fb8238a4a55292c5b57f4afb1ce2db4e43a13b651b1f935",
-  "release\\TheRXDesk\\platform\\backend/app/features/fvg.py": "59c4c4980cd6796df54387b6f403ebbe0eaf7c470c23de4321e0b84d64bf7c51",
-  "release\\TheRXDesk\\platform\\backend/app/features/liquidity.py": "691aa34a361dd0b3aafe0291ad137bf0be052f8fee803b34c13285c2136d968a",
-  "release\\TheRXDesk\\platform\\backend/app/features/ob.py": "2cfa02c2af688d8a0a133343b9c656bdceb818a88b4ced98082a583152460ac2",
-  "release\\TheRXDesk\\platform\\backend/app/features/sweep.py": "705dcc5586c352df1a7590bec2aeb1da5855c0521e0f7cb0da09e391dc1997aa",
-  "release\\TheRXDesk\\platform\\backend/app/features/swing.py": "de7da88094657b232b5f35d6d551acd6710e79f9fa7fa3e1122d8e57b0b6c38b",
-  "release\\TheRXDesk\\platform\\backend/app/features/trend.py": "d1f0c86854126ac04843514d08b633b27301a58e03b1762faa22dd76ea030608"
+  "release/TheRXDesk/platform/backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "release/TheRXDesk/platform/backend/app/features/__init__.py": "16be5ac1825fae025032911454537855cd74df7b19465ffec19cff6b0cf0e3c4",
+  "release/TheRXDesk/platform/backend/app/features/eqhl.py": "b2e2efaa3edbeca9e295a68c6e68a90ee91e3cd1eba2c9a81e94d17881870312",
+  "release/TheRXDesk/platform/backend/app/features/erl_irl.py": "c1e9233f043db00275e40d1c134a37621a9d1fc5b0e30cea64038b772f8a3f31",
+  "release/TheRXDesk/platform/backend/app/features/fib.py": "303d42bc3a2e26772fb8238a4a55292c5b57f4afb1ce2db4e43a13b651b1f935",
+  "release/TheRXDesk/platform/backend/app/features/fvg.py": "59c4c4980cd6796df54387b6f403ebbe0eaf7c470c23de4321e0b84d64bf7c51",
+  "release/TheRXDesk/platform/backend/app/features/liquidity.py": "691aa34a361dd0b3aafe0291ad137bf0be052f8fee803b34c13285c2136d968a",
+  "release/TheRXDesk/platform/backend/app/features/ob.py": "2cfa02c2af688d8a0a133343b9c656bdceb818a88b4ced98082a583152460ac2",
+  "release/TheRXDesk/platform/backend/app/features/sweep.py": "705dcc5586c352df1a7590bec2aeb1da5855c0521e0f7cb0da09e391dc1997aa",
+  "release/TheRXDesk/platform/backend/app/features/swing.py": "de7da88094657b232b5f35d6d551acd6710e79f9fa7fa3e1122d8e57b0b6c38b",
+  "release/TheRXDesk/platform/backend/app/features/trend.py": "d1f0c86854126ac04843514d08b633b27301a58e03b1762faa22dd76ea030608"
  }
 }

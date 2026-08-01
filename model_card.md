@@ -1,8 +1,8 @@
-# RX Logi V2.0 - Model Card
+# RX Logi V2.0.1 - Model Card
 
 **What it is.** A trade **planner**. On every confirmed ERL break it reads whether
-market structure will **continue** or **reverse** (stage-1), and when it reads
-continue it ranks the **1-3 zones** price is most likely to launch from (stage-2).
+market structure will **continue** or **reverse** (stage-1), and ranks the
+**1-3 zones** price is most likely to launch from (stage-2).
 Every output carries a confidence. **It is not an auto-trader and not an entry
 signal** - the human confirms the setup in their own way and decides the entry.
 

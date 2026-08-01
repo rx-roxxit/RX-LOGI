@@ -1,4 +1,4 @@
-# RX Logi V2.0
+# RX Logi V2.0.1
 
 A trade **planner** (not an auto-trader, not an entry signal): on every ERL break it
 reads continue/reverse and ranks the 1-3 launch zones, each with confidence. The human

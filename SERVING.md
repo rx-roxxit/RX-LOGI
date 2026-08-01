@@ -1,8 +1,8 @@
 # Serving RX Logi
 
-Read section 1 before you write any integration code. Everything else here
-helps you size a machine. Getting section 1 wrong does not raise an error -
-it returns plans that are quietly wrong.
+Read sections 1 and 2 before you write any integration code. Everything else
+here helps you size a machine. Getting either section wrong does not raise an
+error - it returns plans that are quietly wrong.
 
 ## 1. Feed bars GROUPED BY CLOSE INSTANT, never one at a time
 
@@ -57,7 +57,38 @@ A bar stamped `ts` on timeframe `tf` closes at `ts + tf`. A `D` bar stamped
 Do not put the same timeframe in a group twice. It is not checked, and it will
 feed that timeframe's store twice.
 
-## 2. Which entry point
+## 2. What every bar must look like
+
+Every timeframe in `bars_by_tf` must meet all of the rules below:
+
+- **Index:** Each bar is indexed by its **OPEN** timestamp, not its close time.
+- **Timezone:** Use UTC. Pass tz-naive UTC or tz-aware UTC. The model converts
+  to America/New_York **INTERNALLY** for killzone features - do not pre-shift.
+  Passing New York time because the model uses New York internally is exactly
+  the mistake this rule warns against.
+- **Bar convention:** pass only CLOSED bars. A bar stamped `t` on timeframe `tf`
+  is usable once `t + tf <= now`. Passing the bar that is still forming is the
+  same class of mistake as feeding one at a time - it will not raise.
+- **Shape:** `bars_by_tf` is a dict of timeframe to a pandas DataFrame with
+  columns `open`, `high`, `low`, `close`, indexed as above. `LiveBook.warm()`
+  takes that dict; `on_closed_bars()` takes tuples, as in section 1.
+- **Which timeframes:** a cell needs all five of its own, and `warm()` raises if
+  any is missing.
+
+  | cell | timeframes |
+  |---|---|
+  | `1H` | 15m, 30m, 1H, 4H, D |
+  | `30m` | 5m, 15m, 30m, 1H, 4H |
+  | `15m` | 3m, 5m, 15m, 30m, 1H |
+
+  A `LiveBook` holding several cells needs the union of their rows.
+- **Ordering:** Within each timeframe, bars must be ascending by time,
+  contiguous, and have no gaps or duplicates.
+- **Minimum lookback:** Provide **>= 12 months** of continuous history per
+  timeframe so the structure state (ERL, swings, zones) is warm; more history
+  is fine and preferred.
+
+## 3. Which entry point
 
 | | |
 |---|---|
@@ -67,7 +98,7 @@ feed that timeframe's store twice.
 `LivePlanner(cell)` is a `LiveBook` holding one cell, for when you serve a
 single cell.
 
-## 3. Memory
+## 4. Memory
 
 Measured on XAUUSD over 2015-2025, all three cells sharing one book:
 
@@ -80,7 +111,7 @@ Measured on XAUUSD over 2015-2025, all three cells sharing one book:
 **Run one process.** Each process pays about 560 MB for Python, torch and the
 model weights before any market data; five processes pay it five times.
 
-## 4. Warm start
+## 5. Warm start
 
 **331 s per symbol** for the full 2015-2025 history (129.6 microseconds per
 bar). There is no snapshot: a restart re-walks the history.
@@ -88,7 +119,7 @@ bar). There is no snapshot: a restart re-walks the history.
 That number is from an 8-core i7. On a slower box it is a floor, not an
 estimate - measure it on yours.
 
-## 5. Memory grows with the bars you feed, without a ceiling
+## 6. Memory grows with the bars you feed, without a ceiling
 
 Zones are reaped as they die: after eleven years only 8,982 are still live, and
 that number is stable. But the bar-indexed side - the OHLC arrays and the
@@ -99,7 +130,7 @@ explode, but it does not level off either.
 
 **Have a restart policy.** There is no history-trimming call in this version.
 
-## 6. Known issue: OB re-freeze skew
+## 7. Known issue: OB re-freeze skew
 
 The shipped stage-1 was trained on order-block features as they were before a
 2026-07-21 amendment, and serves with the amended ones. Measured impact:
@@ -109,7 +140,7 @@ on about 2.3%. Stage-2 is unaffected.
 This is recorded rather than fixed: 2.0.1 ships the same weights as 2.0, byte
 for byte, on purpose.
 
-## 7. Check your install
+## 8. Check your install
 
 ```
 pip install -r requirements.txt

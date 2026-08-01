@@ -2,8 +2,8 @@
  "product": "RX Logi V2.0.1",
  "version": "2.0.1",
  "kind": "trade PLANNER (structure read + launch zones). NOT auto-trade, NOT an entry signal \u2014 the human confirms and decides.",
- "git": "d17f4bcad757ca3bb425763abc17d851de3343fc",
- "built_utc": "2026-08-01T09:09:26.126894+00:00",
+ "git": "9fca406127959985411375c3b82cb6fcb00bbedb",
+ "built_utc": "2026-08-01T10:30:14.522397+00:00",
  "cells": [
   "1H",
   "30m",
