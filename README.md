@@ -31,3 +31,9 @@ out = plan(bars_by_tf, "1H")             # see model_card.md for the input contr
 `inference.py` entry - `lib/` vendored pipeline (run natively, never re-port) -
 `weights/` stage-1 `.pt` + stage-2 `.joblib` - `sample_io/` re-runnable samples -
 `_build/` how the package was assembled (not needed to run).
+
+
+## License
+
+Licensed under the Apache License 2.0.
+See [LICENSE](LICENSE) for details.
